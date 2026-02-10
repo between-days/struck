@@ -5,6 +5,11 @@
 Rust chord kreater<-RUST Chord Kreater<-(RU<-STCK)<-STRUCK
 Tool for getting chords from notes and vice versa
 
+## Notes
+
+- chord.rs is getting heaving with all the parsing specific stuff. Maybe should have chord_parser.rs
+- need to look into error handling and layering
+
 ## Running
 
 ### CLI
@@ -63,6 +68,27 @@ Chord quality extends these with:
 - Dominant (Only does straight dominants for now, no diminished 7ths yet)
 
 The idea here is to build simple models with good mappings between fields, like getting from a chord name to a chord quality or getting from a chord quality to a set of notes.
+
+Still working on a good way to handle patterns from 7 upwards. The general idea is:
+
+- A G7 (G dominant 7th) is a major triad with a minor 7th. - this has dominant chord quality
+- A G9 (G dominant 9th) is a major triad with a minor 7th and a major 9th. - this has dominant chord quality
+- A G11 (G dominant 11th) is a major triad with a minor 7th, a major 9th and a perfect 11th. - this has dominant chord quality
+
+It can be thought of like G9 is a default triad, default 7th. default 9th => major triad + minor 7th + major 9th so it's just G9
+
+G7dim9 is a major triad, a minor 7th (dominant 7th) and a diminished 9 - this has dominant chord quality
+
+To be crystal clear _the chord quality is only affected by intervals up to the 7th_
+
+TODO: look into below chunk
+At this point it's worth mentioning all chord naming is based on the concept of 'stacked thirds'.
+That is to say skipping every other note in a scale gives you 1,3,5,7,9...
+7ths, 9ths... are considered extensions. It might then make sense to derive the triad quality/suspension first, then handling extensions as basically:
+'continue looking for the next stacked 3rd, when we find the last one, that's the number at the end of the chord, and then from there we look for the major next, then we look for addxs.
+
+We for now treat 7ths as special extensions responsible for the chord quality, with 9ths and so on being treated as extensions
+TODO: 9th, 11th addx etc
 
 ## What's in a name
 

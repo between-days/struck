@@ -1,3 +1,4 @@
+use core::fmt;
 use itertools::Itertools;
 
 use crate::theory::note::Note;
@@ -19,6 +20,7 @@ pub const OCTAVE: [Note; 12] = [
 
 // number of semitone steps
 // https://en.wikipedia.org/wiki/Interval_(music)
+// names refer to chromatic scale positions so we don't need to worry about scales when finding chords intervals
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Interval {
     // we only consider the ones relevant to naming for now
@@ -29,7 +31,11 @@ pub enum Interval {
     DiminishedFifth = 6,
     PerfectFifth = 7,
     AugmentedFifth = 8,
+    MinorSeventh = 10,
     Seventh = 11,
+    MinorNinth = 13,
+    MajorNinth = 14,
+    PerfectEleventh = 17,
     Unknown = 100, // TODO: cheese for now
 }
 
@@ -43,6 +49,26 @@ impl From<usize> for Interval {
             8 => Interval::AugmentedFifth,
             11 => Interval::Seventh,
             _ => Interval::Unknown,
+        }
+    }
+}
+
+impl fmt::Display for Interval {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Interval::MajorSecond => write!(f, "Major Second"),
+            Interval::MinorThird => write!(f, "Minor Second"),
+            Interval::MajorThird => write!(f, "Major Third"),
+            Interval::PerfectFourth => write!(f, "Perfect Fourth"),
+            Interval::DiminishedFifth => write!(f, "Diminished Fifth"),
+            Interval::PerfectFifth => write!(f, "Perfect Fifth"),
+            Interval::AugmentedFifth => write!(f, "Augmented Fifth"),
+            Interval::MinorSeventh => write!(f, "Minor Seventh"),
+            Interval::Seventh => write!(f, "Seventh"),
+            Interval::MinorNinth => write!(f, "Minor Ninth"),
+            Interval::MajorNinth => write!(f, "Minor Ninth"),
+            Interval::PerfectEleventh => write!(f, "Perfect eleventh"),
+            Interval::Unknown => write!(f, "Unknown"),
         }
     }
 }
@@ -116,5 +142,15 @@ mod tests {
         let ret = get_interval(&root, interval);
 
         assert_eq!(*ret, Note::D);
+    }
+
+    #[test]
+    fn test_get_interval_lap_around_check_minor7th() {
+        let root = Note::G;
+        let interval = Interval::MinorSeventh;
+
+        let ret = get_interval(&root, interval);
+
+        assert_eq!(*ret, Note::F);
     }
 }

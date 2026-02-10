@@ -1,6 +1,9 @@
 use itertools::Itertools;
 use regex::Regex;
-use std::{fmt, str::FromStr};
+use std::{
+    fmt::{self, format},
+    str::FromStr,
+};
 
 use crate::theory::{
     self,
@@ -14,9 +17,28 @@ pub enum SuspendedType {
     Sus2,
     Sus4,
 }
+
+// TODO: half diminished etc
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum SeventhType {
+    Minor,
+    Dominant,
+    Augmented,
+}
+
+// #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+// pub enum DominantType {
+//     // TODO: might want minor major dominants here too
+//     Seventh,
+//     Ninth,
+//     // Eleventh
+// }
 // https://en.wikipedia.org/wiki/Chord_notation#Chord_quality
 // https://musictheory.pugetsound.edu/mt21c/TriadsIntroduction.html
-// worth noting name base starts with the chord quality which is based on traid quality
+// worth noting name base starts with the chord quality which is based on triad quality
+// the quality of the chord is determined only up to the 7th. After that these are 'pure extensions' that don't change the quality of the chord.
+// a 7th can be considered an extension, but it still impacts chord quality
+// TODO: look into this
 #[derive(Debug, PartialEq, Eq, Default, Clone, Copy)]
 pub enum ChordQuality {
     #[default]
@@ -25,7 +47,12 @@ pub enum ChordQuality {
     Diminished, // triad quality
     Augmented,  // triad quality
     Suspended(SuspendedType),
+    SuspendedSeventh(SuspendedType),
+    MinorSeventh,
     Dominant,
+    AugmentedSeventh,
+    // TODO: PRIORITY: fold all 7s into Seventh(Suspended(SuspendedType), augmented etc)
+    //(DominantType),
     Ambiguous,
 }
 impl FromStr for ChordQuality {
@@ -38,6 +65,12 @@ impl FromStr for ChordQuality {
             "aug" => Ok(ChordQuality::Augmented),
             "sus2" => Ok(ChordQuality::Suspended(SuspendedType::Sus2)),
             "sus4" => Ok(ChordQuality::Suspended(SuspendedType::Sus4)),
+            "aug7" => Ok(ChordQuality::AugmentedSeventh),
+            "m7" => Ok(ChordQuality::MinorSeventh),
+            "7" => Ok(ChordQuality::Dominant),
+
+            //(DominantType::Seventh)),
+            // "9" => Ok(ChordQuality::Dominant(DominantType::Ninth)),
             _ => Err(ChordParseError::InvalidChordName(
                 "invalid chord name".to_string(),
             )),
@@ -55,14 +88,20 @@ pub enum TriadQuality {
     Ambiguous,
 }
 
+// #[derive(Debug, PartialEq, Eq)]
+// pub enum ExtensionQuality {
+//     Seventh(),
+// }
+
 impl From<ChordQuality> for TriadQuality {
     fn from(chord_quality: ChordQuality) -> Self {
         match chord_quality {
-            ChordQuality::Major | ChordQuality::Dominant => TriadQuality::Major,
-            ChordQuality::Minor => TriadQuality::Minor,
+            ChordQuality::Major | ChordQuality::Dominant => TriadQuality::Major, //(..) => TriadQuality::Major,
+            ChordQuality::Minor | ChordQuality::MinorSeventh => TriadQuality::Minor,
             ChordQuality::Diminished => TriadQuality::Diminished,
-            ChordQuality::Augmented => TriadQuality::Augmented,
+            ChordQuality::Augmented | ChordQuality::AugmentedSeventh => TriadQuality::Augmented,
             ChordQuality::Suspended(..) | ChordQuality::Ambiguous => TriadQuality::Ambiguous,
+            ChordQuality::SuspendedSeventh(..) => TriadQuality::Ambiguous,
         }
     }
 }
@@ -72,30 +111,46 @@ impl From<ChordQuality> for TriadQuality {
 impl fmt::Display for ChordQuality {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ChordQuality::Major | ChordQuality::Dominant => write!(f, ""),
-            ChordQuality::Minor => write!(f, "m"),
-            ChordQuality::Diminished => write!(f, "dim"),
-            ChordQuality::Augmented => write!(f, "aug"),
+            ChordQuality::Major => write!(f, "Major"),
+            ChordQuality::Minor => write!(f, "Minor"),
+            ChordQuality::Diminished => write!(f, "Diminished"),
+            ChordQuality::Augmented => write!(f, "Augmented"),
 
+            // TODO: 7, 9, 11 that are in stacked thirds are just X9
+            ChordQuality::Dominant => write!(f, "Dominant"),
+            ChordQuality::MinorSeventh => write!(f, "Minor Seventh"),
+            ChordQuality::AugmentedSeventh => write!(f, "Augmented Seventh"),
+            ChordQuality::SuspendedSeventh(..) => write!(f, "Suspended Seventh"), // TODO: diff 2 4 ?
+
+            // ChordQuality::Dominant(dominant_type) => match dominant_type {
+            //     DominantType::Seventh => write!(f, "Dominant 7th"),
+            //     DominantType::Ninth => write!(f, "Dominant 9th"),
+            // },
             ChordQuality::Suspended(suspended_type) => match suspended_type {
-                SuspendedType::Sus2 => write!(f, "sus2"),
-                SuspendedType::Sus4 => write!(f, "sus4"),
+                SuspendedType::Sus2 => write!(f, "Suspended Second"),
+                SuspendedType::Sus4 => write!(f, "Suspended Fourth"),
             },
 
-            ChordQuality::Ambiguous => write!(f, "!-ambiguous-!"),
+            ChordQuality::Ambiguous => write!(f, "Ambiguous"),
         }
     }
 }
 impl fmt::Display for TriadQuality {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TriadQuality::Major => write!(f, ""),
-            TriadQuality::Minor => write!(f, "m"),
-            TriadQuality::Diminished => write!(f, "dim"),
-            TriadQuality::Augmented => write!(f, "aug"),
-            TriadQuality::Ambiguous => write!(f, "ambiguous"),
+            TriadQuality::Major => write!(f, "Major"),
+            TriadQuality::Minor => write!(f, "Mior"),
+            TriadQuality::Diminished => write!(f, "Diminished"),
+            TriadQuality::Augmented => write!(f, "Augmened"),
+            TriadQuality::Ambiguous => write!(f, "Ambiguous"),
         }
     }
+}
+
+#[derive(Debug)]
+pub enum AddInterval {
+    Interval(Interval),
+    None,
 }
 
 // https://en.wikipedia.org/wiki/Chord_notation
@@ -106,25 +161,38 @@ pub struct Chord {
     pub notes: Vec<Note>,
     pub triad_quality: TriadQuality,
     pub chord_quality: ChordQuality,
+    pub add_degree: Option<AddInterval>,
     pub intervals: Vec<theory::interval::Interval>,
 }
 
+// impl fmt::Display for Chord {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         write!(
+//             f,
+//             "Information on chord {}\nRoot: {}\nChord quality: {}\nTriad quality: {:?}\nIntervals: {}\nNotes: {}\n",
+//             self.name,
+//             self.root,
+//             self.chord_quality,
+//             self.triad_quality,
+//             self.intervals.iter().format(", "),
+//             self.notes.iter().format(", ")
+//         )
+//     }
+// }
 impl fmt::Display for Chord {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.root, self.triad_quality)
+        write!(
+            f,
+            "Information on chord {}\nRoot: {}\nChord quality: {}\nTriad quality: {:?}\nIntervals: {:?}\nNotes: {:?}",
+            self.name,
+            self.root,
+            self.chord_quality,
+            self.triad_quality,
+            // TODO: fix print formatting
+            self.intervals.iter().format(", "),
+            self.notes.iter().format(", ")
+        )
     }
-}
-
-impl Chord {
-    pub fn list_notes_in_chord(&self) {
-        println!("Notes in chord: {}", self.notes.iter().format(", "));
-    }
-
-    pub fn builder() -> ChordBuilder {
-        ChordBuilder::default()
-    }
-
-    // TODO: look into from_x cases
 }
 
 impl From<ChordQuality> for Vec<Interval> {
@@ -134,6 +202,37 @@ impl From<ChordQuality> for Vec<Interval> {
             ChordQuality::Major => vec![Interval::MajorThird, Interval::PerfectFifth],
             ChordQuality::Diminished => vec![Interval::MinorThird, Interval::DiminishedFifth],
             ChordQuality::Augmented => vec![Interval::MajorThird, Interval::AugmentedFifth],
+
+            ChordQuality::AugmentedSeventh => vec![
+                Interval::MajorThird,
+                Interval::PerfectFifth,
+                Interval::MinorSeventh,
+            ],
+
+            ChordQuality::MinorSeventh => vec![
+                Interval::MinorThird,
+                Interval::PerfectFifth,
+                Interval::MinorSeventh,
+            ],
+            ChordQuality::Dominant => vec![
+                Interval::MajorThird,
+                Interval::PerfectFifth,
+                Interval::MinorSeventh,
+            ],
+
+            // ChordQuality::Dominant(dominant_type) => match dominant_type {
+            //     DominantType::Seventh => vec![
+            //         Interval::MajorThird,
+            //         Interval::PerfectFifth,
+            //         Interval::MinorSeventh,
+            //     ],
+            //     DominantType::Ninth => vec![
+            //         Interval::MajorThird,
+            //         Interval::PerfectFifth,
+            //         Interval::MinorSeventh,
+            //         Interval::MajorNinth,
+            //     ],
+            // },
             ChordQuality::Suspended(suspended_type) => match suspended_type {
                 SuspendedType::Sus2 => vec![Interval::MajorSecond, Interval::PerfectFifth],
                 SuspendedType::Sus4 => vec![Interval::PerfectFourth, Interval::PerfectFifth],
@@ -149,6 +248,7 @@ pub struct ChordBuilder {
     root: Note,
     notes: Vec<Note>,
     intervals: Vec<Interval>,
+    add_degree: Option<AddInterval>,
     triad_quality: TriadQuality,
     chord_quality: ChordQuality,
 }
@@ -159,6 +259,7 @@ impl ChordBuilder {
             name: String::from("empty"),
             root: Note::default(),
             notes: Vec::new(),
+            add_degree: None,
             triad_quality: TriadQuality::default(),
             chord_quality: ChordQuality::default(),
             intervals: Vec::new(),
@@ -203,6 +304,7 @@ impl ChordBuilder {
             intervals: self.intervals,
             triad_quality: self.triad_quality,
             chord_quality: self.chord_quality,
+            add_degree: self.add_degree,
         }
     }
 }
@@ -235,11 +337,14 @@ pub fn derive_chord_quality_from_intervals(intervals: &Vec<Interval>) -> ChordQu
     // if it's got a major third, it's either major or augmented - augmented just meaning the raised 5th
     // gist being we can 'modify' the fifth into augmented or diminished -> augmented or diminished chord
 
+    let has_second = intervals.contains(&Interval::MajorSecond);
+    let has_fourth = intervals.contains(&Interval::MajorSecond);
     let has_minor_third = intervals.contains(&Interval::MinorThird);
     let has_major_third = intervals.contains(&Interval::MajorThird);
     let has_diminished_fifth = intervals.contains(&Interval::DiminishedFifth);
     let has_perfect_fifth = intervals.contains(&Interval::PerfectFifth);
     let has_augmented_fifth = intervals.contains(&Interval::AugmentedFifth);
+    let has_minor_seventh = intervals.contains(&Interval::MinorSeventh);
 
     match (has_minor_third, has_major_third) {
         (true, true) => return ChordQuality::Ambiguous,
@@ -248,9 +353,6 @@ pub fn derive_chord_quality_from_intervals(intervals: &Vec<Interval>) -> ChordQu
             if !has_perfect_fifth {
                 return ChordQuality::Ambiguous;
             };
-
-            let has_second = intervals.contains(&Interval::MajorSecond);
-            let has_fourth = intervals.contains(&Interval::MajorSecond);
 
             if has_second && has_fourth {
                 return ChordQuality::Ambiguous;
@@ -268,6 +370,10 @@ pub fn derive_chord_quality_from_intervals(intervals: &Vec<Interval>) -> ChordQu
         }
         (true, false) => {
             if has_perfect_fifth {
+                if has_minor_seventh {
+                    return ChordQuality::MinorSeventh;
+                }
+
                 return ChordQuality::Minor;
             }
             if has_diminished_fifth && !has_augmented_fifth {
@@ -278,13 +384,17 @@ pub fn derive_chord_quality_from_intervals(intervals: &Vec<Interval>) -> ChordQu
         }
         (false, true) => {
             if has_perfect_fifth {
+                if has_minor_seventh {
+                    return ChordQuality::Dominant;
+                }
+
                 return ChordQuality::Major;
             }
             if has_augmented_fifth && !has_diminished_fifth {
                 return ChordQuality::Augmented;
             }
 
-            // TODO: might not need this and copy above, might just be able to fall through to Ambiguous
+            // TODO: might not need this and copy above, might just be able to fall through to ambiguous
             return ChordQuality::Ambiguous;
         }
     }
@@ -308,7 +418,18 @@ pub fn identify_from_root_and_notes(root: &Note, notes: &Vec<Note>) -> Chord {
         ChordQuality::Major => format!("{}", root),
         ChordQuality::Diminished => format!("{}dim", root),
         ChordQuality::Augmented => format!("{}aug", root),
-        ChordQuality::Dominant => format!("{}", root),
+        ChordQuality::AugmentedSeventh => format!("{}aug7", root),
+        ChordQuality::SuspendedSeventh(suspended_type) => match suspended_type {
+            SuspendedType::Sus2 => format!("{}7sus2", root),
+            SuspendedType::Sus4 => format!("{}7sus4", root),
+        },
+        ChordQuality::MinorSeventh => format!("{}min7", root),
+        ChordQuality::Dominant => format!("{}7", root),
+
+        // ChordQuality::Dominant(dominant_type) => match dominant_type {
+        //     DominantType::Seventh => format!("{}7", root),
+        //     DominantType::Ninth => format!("{}9", root),
+        // },
         ChordQuality::Suspended(SuspendedType::Sus2) => format!("{}sus2", root),
         ChordQuality::Suspended(SuspendedType::Sus4) => format!("{}sus4", root),
     };
@@ -323,8 +444,21 @@ pub fn identify_from_root_and_notes(root: &Note, notes: &Vec<Note>) -> Chord {
         .build()
 }
 
+// TODO: look into whether we need triad quality, look into generating scale as context for intervals
+pub fn get_add_interval_from_add(add_str: &str) -> Interval {
+    match add_str {
+        // TODO: need more of these
+        "7" => Interval::MinorSeventh,
+        "9" => Interval::MajorNinth,
+        "11" => Interval::PerfectEleventh,
+        _ => Interval::Unknown, // TODO: look into this
+    }
+}
+
 // TODO: need better naming than indentify_x
 // maybe pub fn from_name ?
+// TODO: clean up pulling from name so that no part of string is left unaccounted for
+// that way can reject unrecognized features
 pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> {
     // TODO: seems like diologuer has options for adding validators so try split validation and move there
 
@@ -347,9 +481,10 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
         }
     };
 
-    let chord_quality_re = Regex::new(r"(m|dim|aug|sus2|sus4)").unwrap();
+    // TODO: refactor cleaner
+    let chord_quality_re = Regex::new(r"(dim|m|aug|sus2|sus4)").unwrap();
 
-    let chord_quality = match chord_quality_re.find(&chord_name) {
+    let mut chord_quality = match chord_quality_re.find(&chord_name) {
         Some(chord_quality_match) => {
             let str = chord_quality_match.as_str();
             match ChordQuality::from_str(str) {
@@ -368,8 +503,77 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
         }
     };
 
+    let mut intervals: Vec<Interval> = Vec::from(chord_quality);
+
+    // sharps before for priority match
+    // now we have base qualities aug, sus etc from above
+    // we try to enrich with 7th quality
+    // the regex below will catch all 7, 9, 11s => catches all 7 variations
+    let extension_quality_re = Regex::new(r"^(C#|C|D#|D|E|F#|F|G#|G|A#|A|B)(7|9|11)").unwrap();
+    chord_quality = match extension_quality_re.captures(&chord_name) {
+        Some(extension_captures) => {
+            // TODO: clean up, feels weird to be putting notes here
+            match &extension_captures[2] {
+                "7" => {
+                    intervals.push(Interval::MinorSeventh);
+                }
+                "9" => {
+                    intervals.push(Interval::MinorSeventh);
+                    intervals.push(Interval::MajorNinth);
+                }
+                "11" => {
+                    intervals.push(Interval::MinorSeventh);
+                    intervals.push(Interval::MajorNinth);
+                    intervals.push(Interval::PerfectEleventh);
+                }
+                _ => {}
+            };
+
+            match chord_quality {
+                ChordQuality::Suspended(suspended_type) => {
+                    ChordQuality::SuspendedSeventh(suspended_type)
+                }
+                ChordQuality::Minor => ChordQuality::MinorSeventh,
+                ChordQuality::Major => ChordQuality::Dominant,
+
+                ChordQuality::Augmented => ChordQuality::AugmentedSeventh,
+                // TODO: rest of these after
+                // ChordQuality::Diminished=> ChordQuality::Diminished,
+                (_) => chord_quality,
+            }
+        }
+        None => chord_quality,
+    };
+
     let triad_quality = TriadQuality::from(chord_quality);
-    let intervals: Vec<Interval> = Vec::from(chord_quality);
+
+    // TODO: maybe this should come before chord quality because adds might be just adding a -
+    // minor 7th for example which makes it a dominant if it's a major triad quality
+    // TODO: allow more adds
+    // matches certain numbers found after add
+    // rust regex doesn't have look before
+    let add_re = Regex::new(r"(add)(7|9|11)").unwrap();
+    let add_degree = match add_re.captures(&chord_name) {
+        Some(add_captures) => match get_add_interval_from_add(&add_captures[2]) {
+            Interval::Unknown => None,
+            interval => Some(interval),
+        },
+        None => None,
+    };
+
+    match add_degree {
+        Some(interval) => {
+            // with another interval we might be changing the chord quality
+            // an example of this is typing Gadd7 (G major triad added 7th(minor)) => G7 dominant chord
+            // if it's 'normal' 7 we'll have the 7th from above
+            if !intervals.contains(&interval) {
+                intervals.push(interval);
+                chord_quality = derive_chord_quality_from_intervals(&intervals);
+            }
+        }
+        None => {}
+    }
+
     let notes: Vec<Note> = std::iter::once(&root)
         .chain(intervals.iter().map(|i| get_interval(&root, i.clone())))
         .cloned()
@@ -413,7 +617,7 @@ mod tests {
     }
 
     #[test]
-    fn test_identify_from_name() {
+    fn test_identify_from_name_gsus2() {
         let ret = identify_from_name("Gsus2".to_string()).expect("hmm");
         assert_eq!(ret.name, "Gsus2");
         assert_eq!(
@@ -427,5 +631,41 @@ mod tests {
             ret.intervals,
             vec![Interval::MajorSecond, Interval::PerfectFifth]
         )
+    }
+
+    #[test]
+    fn test_identify_from_name_gm7() {
+        let ret = identify_from_name("Gm7".to_string()).expect("hmm");
+        assert_eq!(ret.name, "Gm7");
+        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.chord_quality, ChordQuality::MinorSeventh);
+        assert_eq!(ret.triad_quality, TriadQuality::Minor);
+        assert_eq!(
+            ret.intervals,
+            vec![
+                Interval::MinorThird,
+                Interval::PerfectFifth,
+                Interval::MinorSeventh
+            ],
+        );
+        assert_eq!(ret.notes, vec![Note::G, Note::As, Note::D, Note::F]);
+    }
+
+    #[test]
+    fn test_identify_from_name_gadd7_coelesce_to_g7() {
+        let ret = identify_from_name("Gadd7".to_string()).expect("hmm");
+        assert_eq!(ret.name, "Gadd7");
+        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.chord_quality, ChordQuality::Dominant);
+        assert_eq!(ret.triad_quality, TriadQuality::Major);
+        assert_eq!(
+            ret.intervals,
+            vec![
+                Interval::MajorThird,
+                Interval::PerfectFifth,
+                Interval::MinorSeventh
+            ],
+        );
+        assert_eq!(ret.notes, vec![Note::G, Note::B, Note::D, Note::F]);
     }
 }

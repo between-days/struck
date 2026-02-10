@@ -75,8 +75,7 @@ fn identify_notes_from_chord_name(chord_name: String) -> Result<(), ChordParseEr
         }
     };
 
-    chord.list_notes_in_chord();
-
+    println!("{}", chord);
     Ok(())
 }
 
