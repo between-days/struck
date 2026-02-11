@@ -34,6 +34,7 @@ pub enum Interval {
     DiminishedSeventh = 9,
     MinorSeventh = 10,
     Seventh = 11,
+    DiminishedNinth = 12,
     MinorNinth = 13,
     MajorNinth = 14,
     PerfectEleventh = 17,
@@ -67,6 +68,7 @@ impl fmt::Display for Interval {
             Interval::MinorSeventh => write!(f, "Minor 7th"),
             Interval::Seventh => write!(f, "5th"),
             Interval::DiminishedSeventh => write!(f, "Diminished 7th"),
+            Interval::DiminishedNinth => write!(f, "Diminished 9th"),
             Interval::MinorNinth => write!(f, "Minor 9th"),
             Interval::MajorNinth => write!(f, "Minor 9th"),
             Interval::PerfectEleventh => write!(f, "Perfect 11th"),
@@ -77,6 +79,7 @@ impl fmt::Display for Interval {
 
 // get this many semitones above the note
 pub fn get_interval(note: &Note, interval: Interval) -> &Note {
+    println!("interval: {:?}", interval);
     // get where the root note is in octave
     let root_index = match OCTAVE.iter().position(|x| x == note) {
         Some(res) => res,
