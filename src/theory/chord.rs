@@ -260,36 +260,6 @@ impl From<ChordQuality> for Vec<Interval> {
                 },
             },
 
-            // ChordQuality::AugmentedSeventh => vec![
-            //     Interval::MajorThird,
-            //     Interval::PerfectFifth,
-            //     Interval::MinorSeventh,
-            // ],
-
-            // ChordQuality::MinorSeventh => vec![
-            //     Interval::MinorThird,
-            //     Interval::PerfectFifth,
-            //     Interval::MinorSeventh,
-            // ],
-            // ChordQuality::Dominant => vec![
-            //     Interval::MajorThird,
-            //     Interval::PerfectFifth,
-            //     Interval::MinorSeventh,
-            // ],
-
-            // ChordQuality::Dominant(dominant_type) => match dominant_type {
-            //     DominantType::Seventh => vec![
-            //         Interval::MajorThird,
-            //         Interval::PerfectFifth,
-            //         Interval::MinorSeventh,
-            //     ],
-            //     DominantType::Ninth => vec![
-            //         Interval::MajorThird,
-            //         Interval::PerfectFifth,
-            //         Interval::MinorSeventh,
-            //         Interval::MajorNinth,
-            //     ],
-            // },
             ChordQuality::Suspended(suspended_type) => match suspended_type {
                 SuspendedType::Sus2 => vec![Interval::MajorSecond, Interval::PerfectFifth],
                 SuspendedType::Sus4 => vec![Interval::PerfectFourth, Interval::PerfectFifth],
@@ -371,14 +341,38 @@ impl ChordBuilder {
 // TODO: validate that there are at least 2 notes - i only know of power chords with 2 for now though
 
 // account for _all_ intervals present in the chord. I think this needs to be exhaustive or we'll run into issues with dangling notes later
+// we have an issue of deciding between a 9th and a 2nd as we don't have the ability to check the octave of the note.
+// TODO: clean this up
+// but for now we'll rely on the order of the notes given to infer the octave, as in if the semitones before are greater than the one we're on, it's an octave shift.
+// e.g. if the 2nd interval is preceeded by any fifth or 7th -> it's not a 2nd, it's a ninth
 fn find_all_intervals_from_root_and_notes(root: &Note, notes: Vec<Note>) -> Vec<Interval> {
     // go through each note finding what interval it is
-    let intervals = notes
+    let mut intervals: Vec<Interval> = notes
         .iter()
         .skip(1)
         .map(|n| find_interval(root, &n))
         .collect();
 
+    // cheese to make sure 2nd, 4th is correctly reassigned to 9, 11
+    // find the index where the intervals are going down i.e. 5th to a 2nd
+    // tells us we need octave shift for rest
+    if intervals.len() >= 2 {
+        let mut shift_index = 0;
+
+        for (i, e) in intervals.iter().skip(1).enumerate() {
+            if e < intervals.get(i + 1 - 1).expect("TODO: if less than 2") {
+                shift_index = i + 1;
+            }
+        }
+
+        if shift_index > 0 {
+            for i in shift_index..intervals.len() {
+                intervals[i] = Interval::from(intervals[i] as usize + 12)
+            }
+        }
+    }
+
+    intervals.dedup();
     return intervals;
 }
 
@@ -617,7 +611,6 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
                 // TODO: it might be that 9s/11s can take a modifier like G7aug9, look into this
                 // for now A gdim9 is treated like a Gdim7add9
                 "9" => {
-                    println!("match 9");
                     match chord_quality {
                         ChordQuality::Diminished => {
                             intervals.push(Interval::DiminishedSeventh);
@@ -629,7 +622,6 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
                     intervals.push(Interval::MajorNinth);
                 }
                 "11" => {
-                    println!("match 11");
                     match chord_quality {
                         ChordQuality::Diminished => {
                             intervals.push(Interval::DiminishedSeventh);
@@ -690,7 +682,6 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
             // with another interval we might be changing the chord quality
             // an example of this is typing Gadd7 (G major triad added 7th(minor)) => G7 dominant chord
             // if it's 'normal' 7 we'll have the 7th from above
-            println!("got add: {:?}", add_degree);
             if !intervals.contains(&interval) {
                 intervals.push(interval);
                 chord_quality = derive_chord_quality_from_intervals(&intervals);
@@ -714,6 +705,49 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    //
+    // find_all_intervals_from_root_and_notes
+    //
+
+    #[test]
+    fn test_find_all_intervals_from_root_and_notes_gm11() {
+        // Gm11
+        let root = Note::G;
+        let notes = vec![root, Note::As, Note::D, Note::F, Note::A, Note::C];
+
+        let ret = find_all_intervals_from_root_and_notes(&root, notes);
+
+        assert_eq!(
+            ret,
+            vec![
+                Interval::MinorThird,
+                Interval::PerfectFifth,
+                Interval::MinorSeventh,
+                Interval::MajorNinth,
+                Interval::PerfectEleventh
+            ]
+        );
+    }
+
+    #[test]
+    fn test_find_all_intervals_from_root_and_notes_gm11_missing_5th() {
+        // Gdim11
+        let root = Note::G;
+        let notes = vec![root, Note::As, Note::F, Note::A, Note::C];
+
+        let ret = find_all_intervals_from_root_and_notes(&root, notes);
+
+        assert_eq!(
+            ret,
+            vec![
+                Interval::MinorThird,
+                Interval::MinorSeventh,
+                Interval::MajorNinth,
+                Interval::PerfectEleventh
+            ]
+        );
+    }
 
     //
     // get_notes_from_root_and_intervals
@@ -773,6 +807,31 @@ mod tests {
 
         assert_eq!(ret, ChordQuality::Seventh(SeventhType::Dominant));
     }
+
+    //
+    // identify_from_root_and_notes
+    //
+
+    // #[test]
+    // fn test_identify_from_root_and_notes_complex_gm11() {
+    //     let root = Note::G;
+    //     let notes = vec![Note::G, Note::As, Note::D, Note::F, Note::A, Note::C];
+
+    //     let ret = identify_from_root_and_notes(&root, &notes);
+
+    //     assert_eq!(ret.triad_quality, TriadQuality::Minor);
+    //     assert_eq!(ret.chord_quality, ChordQuality::Seventh(SeventhType::Minor));
+    //     assert_eq!(
+    //         ret.intervals,
+    //         vec![
+    //             Interval::MinorThird,
+    //             Interval::PerfectFifth,
+    //             Interval::MinorSeventh,
+    //             Interval::MajorNinth,
+    //             Interval::PerfectEleventh
+    //         ]
+    //     )
+    // }
 
     //
     // identify_chord_from_name

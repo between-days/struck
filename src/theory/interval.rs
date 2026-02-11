@@ -21,7 +21,7 @@ pub const OCTAVE: [Note; 12] = [
 // number of semitone steps
 // https://en.wikipedia.org/wiki/Interval_(music)
 // names refer to chromatic scale positions so we don't need to worry about scales when finding chords intervals
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd)]
 pub enum Interval {
     // we only consider the ones relevant to naming for now
     MajorSecond = 2,
@@ -44,12 +44,20 @@ pub enum Interval {
 impl From<usize> for Interval {
     fn from(value: usize) -> Self {
         match value {
+            2 => Interval::MajorSecond,
             3 => Interval::MinorThird,
             4 => Interval::MajorThird,
+            5 => Interval::PerfectFourth,
             6 => Interval::DiminishedFifth,
             7 => Interval::PerfectFifth,
             8 => Interval::AugmentedFifth,
+            9 => Interval::DiminishedSeventh,
+            10 => Interval::MinorSeventh,
             11 => Interval::Seventh,
+            12 => Interval::DiminishedNinth,
+            13 => Interval::MinorNinth,
+            14 => Interval::MajorNinth,
+            17 => Interval::PerfectEleventh,
             _ => Interval::Unknown,
         }
     }
@@ -79,7 +87,6 @@ impl fmt::Display for Interval {
 
 // get this many semitones above the note
 pub fn get_interval(note: &Note, interval: Interval) -> &Note {
-    println!("interval: {:?}", interval);
     // get where the root note is in octave
     let root_index = match OCTAVE.iter().position(|x| x == note) {
         Some(res) => res,
@@ -97,6 +104,9 @@ pub fn get_interval(note: &Note, interval: Interval) -> &Note {
 
 // find what interval a note is from root
 // count how many semitones we need to get to the note, looping around
+// TODO: as mentioned in chord.rs, we have a conflict between 2nds and 9ths, this is currently handled in chord.rs by checking whether the last interval is more than the current in the loop
+// and we use that to get implied octaves up for 9, 11
+// this seems a little jank but it can wait
 pub fn find_interval(root: &Note, note: &Note) -> Interval {
     // we could use the integer values of the note enum, but feels more extensible to use the ordering in the octave array in this module
     // we can find the integer position of the root, integer position of the note
@@ -112,8 +122,7 @@ pub fn find_interval(root: &Note, note: &Note) -> Interval {
         .expect("NOTE NOT PRESENT IN OCTAVE")
         .0;
 
-    // TODO: look into this cheese
-    // this is just for the lap around so a 9th is not a 2nd etc
+    // circular array
     if note_pos < root_pos {
         note_pos = note_pos + 12;
     }
@@ -126,6 +135,10 @@ pub fn find_interval(root: &Note, note: &Note) -> Interval {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    //
+    // get_interval
+    //
 
     // a basic case that doesn't need loop around
     #[test]
@@ -157,5 +170,39 @@ mod tests {
         let ret = get_interval(&root, interval);
 
         assert_eq!(*ret, Note::F);
+    }
+
+    //
+    // find_interval
+    //
+
+    #[test]
+    fn test_find_interval_no_wrap() {
+        let root = Note::C;
+        let note = Note::E;
+
+        let ret = find_interval(&root, &note);
+
+        assert_eq!(ret, Interval::MajorThird);
+    }
+
+    #[test]
+    fn test_find_interval_lap_around_gminor7th() {
+        let root = Note::G;
+        let note = Note::F;
+
+        let ret = find_interval(&root, &note);
+
+        assert_eq!(ret, Interval::MinorSeventh);
+    }
+
+    #[test]
+    fn test_find_interval_lap_around_g9th() {
+        let root = Note::G;
+        let note = Note::A;
+
+        let ret = find_interval(&root, &note);
+
+        assert_eq!(ret, Interval::MajorSecond);
     }
 }
