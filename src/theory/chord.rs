@@ -604,7 +604,8 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
     // now we have base qualities aug, sus etc from above
     // we try to enrich with 7th quality
     // the regex below will catch all 7, 9, 11s => catches all 7 variations
-    let extension_quality_re = Regex::new(r"^(C#|C|D#|D|E|F#|F|G#|G|A#|A|B|m)(7|9|11)").unwrap();
+    // TODO: ^ for string start but watch Xm
+    let extension_quality_re = Regex::new(r"(C#|C|D#|D|E|F#|F|G#|G|A#|A|B|m)(7|9|11)").unwrap();
     chord_quality = match extension_quality_re.captures(&chord_name) {
         Some(extension_captures) => {
             // TODO: clean up, feels weird to be putting notes here
@@ -624,14 +625,10 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
                 _ => {}
             };
 
-            println!("debug chord quality: {:?}", chord_quality);
-
             // TODO: think there's an issue with reading
             // if there's an extension, the chord quality is affected. For
             match chord_quality {
                 ChordQuality::Suspended(suspended_type) => {
-                    println!("FINDHERE: suspended match {:?}", suspended_type);
-
                     ChordQuality::Seventh(SeventhType::Suspended(suspended_type))
                 }
                 ChordQuality::Minor => ChordQuality::Seventh(SeventhType::Minor),
@@ -641,7 +638,7 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
 
                 // TODO: rest of these after
                 // ChordQuality::Diminished=> ChordQuality::Diminished,
-                (_) => chord_quality,
+                _ => chord_quality,
             }
         }
         None => chord_quality,
@@ -695,6 +692,10 @@ pub fn identify_from_name(chord_name: String) -> Result<Chord, ChordParseError> 
 mod tests {
     use super::*;
 
+    //
+    // derive_chord_quality_from_intervals
+    //
+
     #[test]
     fn test_derive_chord_quality_from_intervals_major_triad_pure() {
         let intervals = vec![Interval::MajorThird, Interval::PerfectFifth];
@@ -718,6 +719,10 @@ mod tests {
         assert_eq!(ret, ChordQuality::Major);
     }
 
+    //
+    // identify_chord_from_name
+    //
+
     #[test]
     fn test_identify_from_name_gsus2() {
         let ret = identify_from_name("Gsus2".to_string()).expect("hmm");
@@ -735,23 +740,37 @@ mod tests {
         )
     }
 
-    // #[test]
-    // fn test_identify_from_name_gm7() {
-    //     let ret = identify_from_name("Gm7".to_string()).expect("hmm");
-    //     assert_eq!(ret.name, "Gm7");
-    //     assert_eq!(ret.root, Note::G);
-    //     assert_eq!(ret.chord_quality, ChordQuality::Seventh(SeventhType::Minor));
-    //     assert_eq!(ret.triad_quality, TriadQuality::Minor);
-    //     assert_eq!(
-    //         ret.intervals,
-    //         vec![
-    //             Interval::MinorThird,
-    //             Interval::PerfectFifth,
-    //             Interval::MinorSeventh
-    //         ],
-    //     );
-    //     assert_eq!(ret.notes, vec![Note::G, Note::As, Note::D, Note::F]);
-    // }
+    #[test]
+    fn test_identify_from_name_gm() {
+        let ret = identify_from_name("Gm".to_string()).expect("hmm");
+        assert_eq!(ret.name, "Gm");
+        assert_eq!(ret.chord_quality, ChordQuality::Minor);
+        assert_eq!(ret.notes, vec![Note::G, Note::As, Note::D]);
+        assert_eq!(ret.triad_quality, TriadQuality::Minor);
+        assert_eq!(ret.root, Note::G);
+        assert_eq!(
+            ret.intervals,
+            vec![Interval::MinorThird, Interval::PerfectFifth]
+        )
+    }
+
+    #[test]
+    fn test_identify_from_name_gm7() {
+        let ret = identify_from_name("Gm7".to_string()).expect("hmm");
+        assert_eq!(ret.name, "Gm7");
+        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.chord_quality, ChordQuality::Seventh(SeventhType::Minor));
+        assert_eq!(ret.triad_quality, TriadQuality::Minor);
+        assert_eq!(
+            ret.intervals,
+            vec![
+                Interval::MinorThird,
+                Interval::PerfectFifth,
+                Interval::MinorSeventh
+            ],
+        );
+        assert_eq!(ret.notes, vec![Note::G, Note::As, Note::D, Note::F]);
+    }
 
     #[test]
     fn test_identify_from_name_gadd7_coelesce_to_g7() {
