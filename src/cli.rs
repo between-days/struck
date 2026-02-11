@@ -1,10 +1,13 @@
 use dialoguer::{theme::ColorfulTheme, Input, Select};
 
-use crate::theory::{
-    self,
-    chord::{identify_from_root_and_notes, ChordQuality},
-    error::{ChordParseError, NoteParseError},
-    note::Note,
+use crate::{
+    parser::{self, chord_parser::identify_from_root_and_notes},
+    theory::{
+        self,
+        chord::ChordQuality,
+        error::{ChordParseError, NoteParseError},
+        note::Note,
+    },
 };
 
 pub fn handle_menu() {
@@ -66,7 +69,7 @@ pub fn handle_menu() {
 }
 
 fn identify_notes_from_chord_name(chord_name: String) -> Result<(), ChordParseError> {
-    let chord = match theory::chord::identify_from_name(chord_name) {
+    let chord = match parser::chord_parser::identify_from_name(chord_name) {
         Ok(res) => res,
         Err(_) => {
             return Err(ChordParseError::InvalidChordName(
