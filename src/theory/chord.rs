@@ -5,12 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::theory::{
-    self,
-    error::ChordParseError,
-    interval::{find_interval, get_interval, Interval},
-    note::Note,
-};
+use crate::theory::{self, error::ChordParseError, interval::Interval, note::Note};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SuspendedType {
@@ -310,27 +305,8 @@ pub fn find_all_intervals_from_root_and_notes(root: &Note, notes: Vec<Note>) -> 
     let mut intervals: Vec<Interval> = notes
         .iter()
         .skip(1)
-        .map(|n| find_interval(root, &n))
+        .map(|n| root.find_interval(n))
         .collect();
-
-    // cheese to make sure 2nd, 4th is correctly reassigned to 9, 11
-    // find the index where the intervals are going down i.e. 5th to a 2nd
-    // tells us we need octave shift for rest
-    if intervals.len() >= 2 {
-        let mut shift_index = 0;
-
-        for (i, e) in intervals.iter().skip(1).enumerate() {
-            if e < intervals.get(i + 1 - 1).expect("TODO: if less than 2") {
-                shift_index = i + 1;
-            }
-        }
-
-        if shift_index > 0 {
-            for i in shift_index..intervals.len() {
-                intervals[i] = Interval::from(intervals[i] as usize + 12)
-            }
-        }
-    }
 
     intervals.dedup();
     return intervals;
@@ -448,9 +424,11 @@ pub fn get_add_interval_from_add(add_str: &str) -> Interval {
 }
 
 pub fn get_notes_from_root_and_intervals(root: &Note, intervals: &Vec<Interval>) -> Vec<Note> {
-    std::iter::once(root)
-        .chain(intervals.iter().map(|i| get_interval(&root, i.clone())))
-        .cloned()
+    let is = intervals.as_slice();
+
+    std::iter::once(root.clone())
+        .chain(is.iter().map(|i| root.get_interval(*i)))
+        // .cloned()
         .collect()
 }
 
@@ -465,8 +443,15 @@ mod tests {
     #[test]
     fn test_find_all_intervals_from_root_and_notes_gm11() {
         // Gm11
-        let root = Note::G;
-        let notes = vec![root, Note::As, Note::D, Note::F, Note::A, Note::C];
+        let root = Note::new(theory::pitch_class::PitchClass::G, 4);
+        let notes = vec![
+            root,
+            Note::new(theory::pitch_class::PitchClass::As, 4),
+            Note::new(theory::pitch_class::PitchClass::D, 5),
+            Note::new(theory::pitch_class::PitchClass::F, 5),
+            Note::new(theory::pitch_class::PitchClass::A, 5),
+            Note::new(theory::pitch_class::PitchClass::C, 6),
+        ];
 
         let ret = find_all_intervals_from_root_and_notes(&root, notes);
 
@@ -485,8 +470,14 @@ mod tests {
     #[test]
     fn test_find_all_intervals_from_root_and_notes_gm11_missing_5th() {
         // Gdim11
-        let root = Note::G;
-        let notes = vec![root, Note::As, Note::F, Note::A, Note::C];
+        let root = Note::new(theory::pitch_class::PitchClass::G, 4);
+        let notes = vec![
+            root,
+            Note::new(theory::pitch_class::PitchClass::As, 4),
+            Note::new(theory::pitch_class::PitchClass::F, 5),
+            Note::new(theory::pitch_class::PitchClass::A, 5),
+            Note::new(theory::pitch_class::PitchClass::C, 6),
+        ];
 
         let ret = find_all_intervals_from_root_and_notes(&root, notes);
 
@@ -507,7 +498,7 @@ mod tests {
     #[test]
     fn test_get_notes_from_root_and_intervals() {
         // Gdim11
-        let root = Note::G;
+        let root = Note::new(theory::pitch_class::PitchClass::G, 4);
         let intervals = vec![
             Interval::MinorThird,
             Interval::DiminishedFifth,
@@ -520,7 +511,14 @@ mod tests {
 
         assert_eq!(
             ret,
-            vec![Note::G, Note::As, Note::Cs, Note::E, Note::Gs, Note::C]
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::As, 4),
+                Note::new(theory::pitch_class::PitchClass::Cs, 5),
+                Note::new(theory::pitch_class::PitchClass::E, 5),
+                Note::new(theory::pitch_class::PitchClass::Gs, 5),
+                Note::new(theory::pitch_class::PitchClass::C, 6)
+            ]
         );
     }
 

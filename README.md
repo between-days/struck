@@ -117,6 +117,10 @@ e.g.:
 Ddmin => (root = D) (quality = diminished).
 For handling 7ths and so on,
 
+## Todo:
+
+- clean this readme up, explain progressions, frequency etc
+
 ## Testing
 
 `cargo test`

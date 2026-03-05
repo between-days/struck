@@ -1,45 +1,44 @@
+use crate::theory::{
+    error::NoteParseError,
+    pitch_class::{self, PitchClass},
+};
 use std::{fmt, str::FromStr};
-
-use crate::theory::error::NoteParseError;
-
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum Note {
-    #[default]
-    C,
-    Cs,
-    D,
-    Ds,
-    E,
-    F,
-    Fs,
-    G,
-    Gs,
-    A,
-    As,
-    B,
+pub struct Note {
+    pub pitch_class: PitchClass,
+    pub pitch_octave: u8,
+    // literal frequency for synth to use on a sine
+    // pub frequency: f64,
 }
 
+// impl Eq for Note
 // TODO: might be able to do something here about choosing between Db and C#, all depends on the context of the -
-// position of the note in the chord, job for a while later though
-// it might make sense to change the notes above from C, Cs, D etc and change them to just octave positions like -
+// position of the PitchClass in the chord, job for a while later though
+// it might make sense to change the PitchClasses above from C, Cs, D etc and change them to just octave positions like -
 // 0, 1, 2, 3 or some kind of pitch class type
-// and have the printout decide the note name based on the chord context
+// and have the printout decide the PitchClass name based on the chord context
 impl fmt::Display for Note {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Note::C => write!(f, "C"),
-            Note::Cs => write!(f, "C#"),
-            Note::D => write!(f, "D"),
-            Note::Ds => write!(f, "D#"),
-            Note::E => write!(f, "E"),
-            Note::F => write!(f, "F"),
-            Note::Fs => write!(f, "F#"),
-            Note::G => write!(f, "G"),
-            Note::Gs => write!(f, "G#"),
-            Note::A => write!(f, "A"),
-            Note::As => write!(f, "A#"),
-            Note::B => write!(f, "B"),
-        }
+        // let note_str = self
+
+        let pitch_class_str = match self.pitch_class {
+            PitchClass::C => "C",
+            PitchClass::Cs => "C#",
+            PitchClass::D => "D",
+            PitchClass::Ds => "D#",
+            PitchClass::E => "E",
+            PitchClass::F => "F",
+            PitchClass::Fs => "F#",
+            PitchClass::G => "G",
+            PitchClass::Gs => "G#",
+            PitchClass::A => "A",
+            PitchClass::As => "A#",
+            PitchClass::B => "B",
+        };
+
+        // TODO: work out formatting later
+        // write!(f, "{}{}", pitch_class_str, self.pitch_octave)
+        write!(f, "{}", pitch_class_str)
     }
 }
 
@@ -47,26 +46,57 @@ impl FromStr for Note {
     type Err = NoteParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "C" => Ok(Note::C),
-            "C#" => Ok(Note::Cs),
-            "Db" => Ok(Note::Cs), // TODO: worry about flats and sharp matches later
-            "D" => Ok(Note::D),
-            "D#" => Ok(Note::Ds),
-            "E" => Ok(Note::E),
-            "F" => Ok(Note::F),
-            "F#" => Ok(Note::Fs),
-            "G" => Ok(Note::G),
-            "G#" => Ok(Note::Gs),
-            "A" => Ok(Note::A),
-            "A#" => Ok(Note::As),
-            "B" => Ok(Note::B),
-            _ => Err(NoteParseError::InvalidNoteStringValue(s.to_string())),
+        let pitch_class = match s {
+            "C" => Ok(PitchClass::C),
+            "C#" => Ok(PitchClass::Cs),
+            "Db" => Ok(PitchClass::Cs), // TODO: worry about flats and sharp matches later
+            "D" => Ok(PitchClass::D),
+            "D#" => Ok(PitchClass::Ds),
+            "E" => Ok(PitchClass::E),
+            "F" => Ok(PitchClass::F),
+            "F#" => Ok(PitchClass::Fs),
+            "G" => Ok(PitchClass::G),
+            "G#" => Ok(PitchClass::Gs),
+            "A" => Ok(PitchClass::A),
+            "A#" => Ok(PitchClass::As),
+            "B" => Ok(PitchClass::B),
+            _ => Err(NoteParseError::InvalidPitchClassStringValue(s.to_string())),
+        };
+
+        // default octave 4 for now
+        match pitch_class {
+            Ok(val) => Ok(Note::new(val, 4)),
+            Err(e) => Err(NoteParseError::InvalidPitchClassStringValue(
+                (s.to_string()),
+            )),
         }
     }
 }
+
 impl Note {
+    pub fn new(pitch_class: pitch_class::PitchClass, pitch_octave: u8) -> Note {
+        // TODO: ban above certain octave
+        return Note {
+            pitch_class: pitch_class,
+            pitch_octave: pitch_octave,
+            // frequency: 2332.0,
+        };
+    }
+
     pub fn parse(str: &str) -> Result<Note, NoteParseError> {
-        return Note::from_str(str);
+        let pitch_class = PitchClass::parse(str);
+        // TODO: for now default to 4th octave
+        let octave = 4;
+
+        match (pitch_class) {
+            (Err(e_p)) => {
+                return Err(NoteParseError::InvalidPitchClassStringValue(
+                    "invalid pitch class".to_string(),
+                ));
+            }
+            (Ok(p_c)) => {
+                return Ok(Note::new(p_c, octave));
+            }
+        }
     }
 }

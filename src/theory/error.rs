@@ -1,6 +1,12 @@
 #[derive(Debug)]
+pub enum PitchClassParseError {
+    InvalidPitchClassStringValue(String),
+}
+
+#[derive(Debug)]
 pub enum NoteParseError {
-    InvalidNoteStringValue(String),
+    InvalidPitchClassStringValue(String),
+    InvalidOctaveStringValue(String),
 }
 
 #[derive(Debug)]

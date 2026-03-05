@@ -13,7 +13,7 @@ use crate::theory::{
         ChordQuality, SeventhType, SuspendedType, TriadQuality,
     },
     error::ChordParseError,
-    interval::{find_interval, get_interval, Interval},
+    interval::Interval,
     note::Note,
 };
 
@@ -255,8 +255,15 @@ mod tests {
 
     #[test]
     fn test_identify_from_root_and_notes_complex_gm11() {
-        let root = Note::G;
-        let notes = vec![Note::G, Note::As, Note::D, Note::F, Note::A, Note::C];
+        let root = Note::new(theory::pitch_class::PitchClass::G, 4);
+        let notes = vec![
+            Note::new(theory::pitch_class::PitchClass::G, 4),
+            Note::new(theory::pitch_class::PitchClass::As, 4),
+            Note::new(theory::pitch_class::PitchClass::D, 5),
+            Note::new(theory::pitch_class::PitchClass::F, 5),
+            Note::new(theory::pitch_class::PitchClass::A, 5),
+            Note::new(theory::pitch_class::PitchClass::C, 6),
+        ];
 
         let ret = identify_from_root_and_notes(&root, &notes);
 
@@ -286,9 +293,17 @@ mod tests {
             ret.chord_quality,
             ChordQuality::Suspended(SuspendedType::Sus2)
         );
-        assert_eq!(ret.notes, vec![Note::G, Note::A, Note::D]);
+        assert_eq!(
+            ret.notes,
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::A, 4),
+                Note::new(theory::pitch_class::PitchClass::D, 5)
+            ]
+        );
         assert_eq!(ret.triad_quality, TriadQuality::Ambiguous);
-        assert_eq!(ret.root, Note::G);
+
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(
             ret.intervals,
             vec![Interval::MajorSecond, Interval::PerfectFifth]
@@ -300,9 +315,16 @@ mod tests {
         let ret = identify_from_name("Gm".to_string()).expect("hmm");
         assert_eq!(ret.name, "Gm");
         assert_eq!(ret.chord_quality, ChordQuality::Minor);
-        assert_eq!(ret.notes, vec![Note::G, Note::As, Note::D]);
+        assert_eq!(
+            ret.notes,
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::As, 4),
+                Note::new(theory::pitch_class::PitchClass::D, 5)
+            ]
+        );
         assert_eq!(ret.triad_quality, TriadQuality::Minor);
-        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(
             ret.intervals,
             vec![Interval::MinorThird, Interval::PerfectFifth]
@@ -313,7 +335,7 @@ mod tests {
     fn test_identify_from_name_gm7() {
         let ret = identify_from_name("Gm7".to_string()).expect("hmm");
         assert_eq!(ret.name, "Gm7");
-        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(ret.chord_quality, ChordQuality::Seventh(SeventhType::Minor));
         assert_eq!(ret.triad_quality, TriadQuality::Minor);
         assert_eq!(
@@ -324,14 +346,22 @@ mod tests {
                 Interval::MinorSeventh
             ],
         );
-        assert_eq!(ret.notes, vec![Note::G, Note::As, Note::D, Note::F]);
+        assert_eq!(
+            ret.notes,
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::As, 4),
+                Note::new(theory::pitch_class::PitchClass::D, 5),
+                Note::new(theory::pitch_class::PitchClass::F, 5)
+            ]
+        );
     }
 
     #[test]
     fn test_identify_from_name_gaug7() {
         let ret = identify_from_name("Gaug7".to_string()).expect("hmm");
         assert_eq!(ret.name, "Gaug7");
-        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(
             ret.chord_quality,
             ChordQuality::Seventh(SeventhType::Augmented)
@@ -345,14 +375,22 @@ mod tests {
                 Interval::MinorSeventh
             ],
         );
-        assert_eq!(ret.notes, vec![Note::G, Note::B, Note::Ds, Note::F]);
+        assert_eq!(
+            ret.notes,
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::B, 4),
+                Note::new(theory::pitch_class::PitchClass::Ds, 5),
+                Note::new(theory::pitch_class::PitchClass::F, 5)
+            ]
+        );
     }
 
     #[test]
     fn test_identify_from_name_gdim7() {
         let ret = identify_from_name("Gdim7".to_string()).expect("hmm");
         assert_eq!(ret.name, "Gdim7");
-        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(
             ret.chord_quality,
             ChordQuality::Seventh(SeventhType::Diminished)
@@ -366,14 +404,22 @@ mod tests {
                 Interval::DiminishedSeventh
             ],
         );
-        assert_eq!(ret.notes, vec![Note::G, Note::As, Note::Cs, Note::E]);
+        assert_eq!(
+            ret.notes,
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::As, 4),
+                Note::new(theory::pitch_class::PitchClass::Cs, 5),
+                Note::new(theory::pitch_class::PitchClass::E, 5)
+            ]
+        );
     }
 
     #[test]
     fn test_identify_from_name_gadd7_coalesce_to_g7() {
         let ret = identify_from_name("Gadd7".to_string()).expect("hmm");
         assert_eq!(ret.name, "Gadd7");
-        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(
             ret.chord_quality,
             ChordQuality::Seventh(SeventhType::Dominant)
@@ -387,14 +433,22 @@ mod tests {
                 Interval::MinorSeventh
             ],
         );
-        assert_eq!(ret.notes, vec![Note::G, Note::B, Note::D, Note::F]);
+        assert_eq!(
+            ret.notes,
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::B, 4),
+                Note::new(theory::pitch_class::PitchClass::D, 5),
+                Note::new(theory::pitch_class::PitchClass::F, 5)
+            ]
+        );
     }
 
     #[test]
     fn test_identify_complex_g7sus2() {
         let ret = identify_from_name("G7sus2".to_string()).expect("hmm");
         assert_eq!(ret.name, "G7sus2");
-        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(
             ret.chord_quality,
             ChordQuality::Seventh(SeventhType::Suspended(SuspendedType::Sus2))
@@ -408,14 +462,22 @@ mod tests {
                 Interval::MinorSeventh,
             ],
         );
-        assert_eq!(ret.notes, vec![Note::G, Note::A, Note::D, Note::F]);
+        assert_eq!(
+            ret.notes,
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::A, 4),
+                Note::new(theory::pitch_class::PitchClass::D, 5),
+                Note::new(theory::pitch_class::PitchClass::F, 5)
+            ]
+        );
     }
 
     #[test]
     fn test_identify_complex_g7sus2add11() {
         let ret = identify_from_name("G7sus2add11".to_string()).expect("hmm");
         assert_eq!(ret.name, "G7sus2add11");
-        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(
             ret.chord_quality,
             ChordQuality::Seventh(SeventhType::Suspended(SuspendedType::Sus2))
@@ -432,7 +494,16 @@ mod tests {
         );
 
         // TODO: have code work odering for notes relative ot root, this is jank ordering
-        assert_eq!(ret.notes, vec![Note::G, Note::A, Note::D, Note::F, Note::C]);
+        assert_eq!(
+            ret.notes,
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::A, 4),
+                Note::new(theory::pitch_class::PitchClass::D, 5),
+                Note::new(theory::pitch_class::PitchClass::F, 5),
+                Note::new(theory::pitch_class::PitchClass::C, 6)
+            ]
+        );
     }
 
     // it's worth noting that the naming works like: take the last interval before the number and diminish, or augment the 'chain'
@@ -441,7 +512,7 @@ mod tests {
     fn test_identify_higher_extension_with_diminished_gdim11() {
         let ret = identify_from_name("Gdim11".to_string()).expect("hmm");
         assert_eq!(ret.name, "Gdim11");
-        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(
             ret.chord_quality,
             ChordQuality::Seventh(SeventhType::Diminished)
@@ -460,7 +531,14 @@ mod tests {
 
         assert_eq!(
             ret.notes,
-            vec![Note::G, Note::As, Note::Cs, Note::E, Note::Gs, Note::C]
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::As, 4),
+                Note::new(theory::pitch_class::PitchClass::Cs, 5),
+                Note::new(theory::pitch_class::PitchClass::E, 5),
+                Note::new(theory::pitch_class::PitchClass::Gs, 5),
+                Note::new(theory::pitch_class::PitchClass::C, 6)
+            ]
         );
     }
 
@@ -468,7 +546,7 @@ mod tests {
     fn test_identify_higher_extension_with_augmented_gaug11() {
         let ret = identify_from_name("Gaug11".to_string()).expect("hmm");
         assert_eq!(ret.name, "Gaug11");
-        assert_eq!(ret.root, Note::G);
+        assert_eq!(ret.root, Note::new(theory::pitch_class::PitchClass::G, 4));
         assert_eq!(
             ret.chord_quality,
             ChordQuality::Seventh(SeventhType::Augmented)
@@ -487,7 +565,14 @@ mod tests {
 
         assert_eq!(
             ret.notes,
-            vec![Note::G, Note::B, Note::Ds, Note::F, Note::A, Note::C]
+            vec![
+                Note::new(theory::pitch_class::PitchClass::G, 4),
+                Note::new(theory::pitch_class::PitchClass::B, 4),
+                Note::new(theory::pitch_class::PitchClass::Ds, 5),
+                Note::new(theory::pitch_class::PitchClass::F, 5),
+                Note::new(theory::pitch_class::PitchClass::A, 5),
+                Note::new(theory::pitch_class::PitchClass::C, 6)
+            ]
         );
     }
 }

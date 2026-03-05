@@ -1,12 +1,14 @@
+use clearscreen;
 use dialoguer::{theme::ColorfulTheme, Input, Select};
 
 use crate::{
     parser::{self, chord_parser::identify_from_root_and_notes},
     theory::{
         self,
-        chord::ChordQuality,
+        chord::{Chord, ChordQuality},
         error::{ChordParseError, NoteParseError},
         note::Note,
+        player::{self},
     },
 };
 
@@ -14,11 +16,13 @@ pub fn handle_menu() {
     let items = vec![
         "Information on a known chord",
         "Create chord from notes",
+        "Play some chords",
         "Quit",
     ];
 
     // Loop the menu until the user decides to quit
     loop {
+        clearscreen::clear().expect("failed to clear screen");
         let selection = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Choose your activity")
             .items(&items)
@@ -27,37 +31,22 @@ pub fn handle_menu() {
             .expect("Failed to handle input");
 
         match selection {
-            Some(index) => {
-                match index {
-                    0 => {
-                        let chord_name: String = Input::new()
-                            .with_prompt("Enter chord name ")
-                            .interact_text()
-                            .expect(""); // TODO: probably won't panic
-
-                        match identify_notes_from_chord_name(chord_name) {
-                            Ok(()) => (),
-                            Err(e) => println!("caught error: {:?}", e),
-                        }
-                    }
-                    1 => {
-                        let notes_raw: String = Input::new()
-                            .with_prompt("Enter notes seperated by space e.g. A# B C ")
-                            .interact_text()
-                            .expect(""); // TODO: probably won't panic
-
-                        match identify_chord_from_notes(notes_raw) {
-                            Ok(()) => (),
-                            Err(e) => println!("caught error: {:?}", e),
-                        }
-                    }
-                    2 => {
-                        println!("Goodbye!");
-                        break;
-                    }
-                    _ => unreachable!(),
+            Some(index) => match index {
+                0 => {
+                    handle_chord_loop();
                 }
-            }
+                1 => {
+                    handle_notes_loop();
+                }
+                2 => {
+                    handle_progression_loop();
+                }
+                3 => {
+                    println!("Goodbye!");
+                    break;
+                }
+                _ => unreachable!(),
+            },
             None => {
                 println!("Goodbye!");
                 break;
@@ -65,6 +54,76 @@ pub fn handle_menu() {
         }
 
         println!();
+    }
+}
+
+fn handle_progression_loop() {
+    // find each chord string
+    // get each chord from that
+    // play all of them
+    // in the future, it should be then taking those chords and building a progression object,
+    // which has it's own features with things like key, pattern e.g. i Iv idim etc
+
+    println!("Enter chords seperated by space e.g. A#m B7 Cdim (space or exit to exit)");
+
+    loop {
+        let input: String = Input::new().with_prompt("> ").interact_text().expect(""); // TODO: probably won't panic
+
+        if input.trim().is_empty() || input.trim().eq("exit") {
+            break;
+        }
+
+        // don't forget to trim here, otherwise there'll be chord names " "
+        let chord_strings = input.trim().split_terminator(" ");
+
+        let chords: Vec<Chord> = chord_strings
+            .map(|cs| parser::chord_parser::identify_from_name(cs.trim().to_string()).expect("msg"))
+            .collect();
+
+        player::play_progression(chords);
+    }
+}
+
+fn handle_notes_loop() {
+    println!("Enter notes seperated by space e.g. A# B C");
+
+    loop {
+        let input: String = Input::new()
+            .with_prompt("> ")
+            .with_initial_text(" ")
+            .interact_text()
+            .expect(""); // TODO: probably won't panic
+
+        if input.trim().is_empty() || input.trim().eq("exit") {
+            break;
+        }
+
+        match identify_chord_from_notes(input) {
+            Ok(()) => (),
+            Err(e) => println!("caught error: {:?}", e),
+        }
+    }
+}
+
+// keep taking chord names until exit
+fn handle_chord_loop() {
+    println!("Enter chord name, space input or exit to go back");
+
+    loop {
+        let chord_name: String = Input::new()
+            .with_prompt("Enter chord name ")
+            .with_initial_text(" ")
+            .interact_text()
+            .expect(""); // TODO: probably won't panic
+
+        if chord_name.trim().is_empty() || chord_name.trim().eq("exit") {
+            break;
+        }
+
+        match identify_notes_from_chord_name(chord_name) {
+            Ok(()) => (),
+            Err(e) => println!("caught error: {:?}", e),
+        }
     }
 }
 
@@ -79,6 +138,8 @@ fn identify_notes_from_chord_name(chord_name: String) -> Result<(), ChordParseEr
     };
 
     println!("{}", chord);
+    println!("Rolling chord...");
+    player::roll_chord(chord);
     Ok(())
 }
 
@@ -102,7 +163,7 @@ fn identify_chord_from_notes(notes_raw: String) -> Result<(), NoteParseError> {
     if possible_chords.len() == 0 {
         println!("No possible chords found!")
     } else {
-        println!("Could be: ");
+        print!("Could be: ");
         possible_chords.iter().for_each(|c| println!("{}", c.name));
     }
 
