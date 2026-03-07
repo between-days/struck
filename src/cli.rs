@@ -2,7 +2,10 @@ use clearscreen;
 use dialoguer::{theme::ColorfulTheme, Input, Select};
 
 use crate::{
-    parser::{self, chord_parser::identify_from_root_and_notes},
+    parser::{
+        self,
+        chord_parser::{self, identify_from_root_and_notes},
+    },
     theory::{
         self,
         chord::{Chord, ChordQuality},
@@ -67,7 +70,11 @@ fn handle_progression_loop() {
     println!("Enter chords seperated by space e.g. A#m B7 Cdim (space or exit to exit)");
 
     loop {
-        let input: String = Input::new().with_prompt("> ").interact_text().expect(""); // TODO: probably won't panic
+        let input: String = Input::new()
+            .with_prompt("> ")
+            .with_initial_text(" ")
+            .interact_text()
+            .expect(""); // TODO: probably won't panic
 
         if input.trim().is_empty() || input.trim().eq("exit") {
             break;
@@ -85,7 +92,9 @@ fn handle_progression_loop() {
 }
 
 fn handle_notes_loop() {
-    println!("Enter notes seperated by space e.g. A# B C");
+    println!(
+        "Enter notes seperated by space, root first, in ascending order e.g. A# B C = A#4 B4 C5"
+    );
 
     loop {
         let input: String = Input::new()
@@ -128,26 +137,54 @@ fn handle_chord_loop() {
 }
 
 fn identify_notes_from_chord_name(chord_name: String) -> Result<(), ChordParseError> {
-    let chord = match parser::chord_parser::identify_from_name(chord_name) {
-        Ok(res) => res,
-        Err(_) => {
-            return Err(ChordParseError::InvalidChordName(
-                "error identifying from name".to_string(),
-            ))
-        }
-    };
+    let chord = chord_parser::identify_from_name(chord_name)?;
 
     println!("{}", chord);
     println!("Rolling chord...");
-    player::roll_chord(chord);
+    player::roll_chord(&chord);
     Ok(())
 }
 
+// entering G B D will go to G4 B4 D4 which is typically incorrect, that input usually means G4 B4 D5 which is a G major chord
+// for cli input, we should assume the notes are in ascending order
+fn assume_note_ordering(mut notes: Vec<Note>) -> Vec<Note> {
+    let mut index = 1;
+
+    // go over each note in the list, creating a new list in assumed order i.e get that D5 mentioned in above comment
+    while index < notes.len() {
+        // if note is lower than one before, increase octave
+        if notes.get(index) < notes.get(index - 1) {
+            let n = notes[index];
+
+            let nn = Note {
+                pitch_class: n.pitch_class,
+                pitch_octave: n.pitch_octave + 1,
+            };
+
+            notes[index] = nn;
+        }
+
+        index = index + 1;
+    }
+
+    return notes;
+}
+
 fn identify_chord_from_notes(notes_raw: String) -> Result<(), NoteParseError> {
-    let notes: Vec<theory::note::Note> = notes_raw
+    // TODO: if there aren't octave numbers on the string notes A4, B5 for example, we should assume the notes are ascending
+    // so G B D should default to G4, and so then B4, D5
+    let n: Vec<theory::note::Note> = notes_raw
         .split_whitespace()
-        .map(|n| Note::parse(n).unwrap())
+        .map(|n| n.parse().unwrap())
         .collect();
+
+    println!("got base notes");
+
+    let notes = assume_note_ordering(n);
+
+    println!("got ordered notes");
+
+    // change so above is satisfied i.e. make sure notes are ascending
 
     let mut possible_chords = vec![];
 
@@ -162,6 +199,15 @@ fn identify_chord_from_notes(notes_raw: String) -> Result<(), NoteParseError> {
 
     if possible_chords.len() == 0 {
         println!("No possible chords found!")
+    } else if possible_chords.len() == 1 {
+        // if there's only one dump info and roll it
+        let chord = possible_chords
+            .get(0)
+            .expect("already checked there's one, shouldn't happen");
+
+        println!("{}", chord);
+        println!("Rolling chord...");
+        player::roll_chord(&chord);
     } else {
         print!("Could be: ");
         possible_chords.iter().for_each(|c| println!("{}", c.name));

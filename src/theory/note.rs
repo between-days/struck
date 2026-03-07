@@ -1,5 +1,5 @@
 use crate::theory::{
-    error::NoteParseError,
+    error::{NoteParseError, PitchClassParseError},
     pitch_class::{self, PitchClass},
 };
 use std::{fmt, str::FromStr};
@@ -19,8 +19,6 @@ pub struct Note {
 // and have the printout decide the PitchClass name based on the chord context
 impl fmt::Display for Note {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // let note_str = self
-
         let pitch_class_str = match self.pitch_class {
             PitchClass::C => "C",
             PitchClass::Cs => "C#",
@@ -46,57 +44,40 @@ impl FromStr for Note {
     type Err = NoteParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let pitch_class = match s {
-            "C" => Ok(PitchClass::C),
-            "C#" => Ok(PitchClass::Cs),
-            "Db" => Ok(PitchClass::Cs), // TODO: worry about flats and sharp matches later
-            "D" => Ok(PitchClass::D),
-            "D#" => Ok(PitchClass::Ds),
-            "E" => Ok(PitchClass::E),
-            "F" => Ok(PitchClass::F),
-            "F#" => Ok(PitchClass::Fs),
-            "G" => Ok(PitchClass::G),
-            "G#" => Ok(PitchClass::Gs),
-            "A" => Ok(PitchClass::A),
-            "A#" => Ok(PitchClass::As),
-            "B" => Ok(PitchClass::B),
-            _ => Err(NoteParseError::InvalidPitchClassStringValue(s.to_string())),
-        };
+        let pitch_class = PitchClass::from_str(s)?;
 
         // default octave 4 for now
-        match pitch_class {
-            Ok(val) => Ok(Note::new(val, 4)),
-            Err(e) => Err(NoteParseError::InvalidPitchClassStringValue(
-                (s.to_string()),
-            )),
-        }
+        Ok(Note {
+            pitch_class: pitch_class,
+            pitch_octave: 4,
+        })
     }
 }
 
 impl Note {
-    pub fn new(pitch_class: pitch_class::PitchClass, pitch_octave: u8) -> Note {
-        // TODO: ban above certain octave
-        return Note {
-            pitch_class: pitch_class,
-            pitch_octave: pitch_octave,
-            // frequency: 2332.0,
-        };
-    }
+    // pub fn new(pitch_class: pitch_class::PitchClass, pitch_octave: u8) -> Note {
+    //     // TODO: ban above certain octave
+    //     return Note {
+    //         pitch_class: pitch_class,
+    //         pitch_octave: pitch_octave,
+    //         // frequency: 2332.0,
+    //     };
+    // }
 
-    pub fn parse(str: &str) -> Result<Note, NoteParseError> {
-        let pitch_class = PitchClass::parse(str);
-        // TODO: for now default to 4th octave
-        let octave = 4;
+    // pub fn parse(str: &str) -> Result<Note, NoteParseError> {
+    //     let pitch_class = PitchClass::parse(str);
+    //     // TODO: for now default to 4th octave
+    //     let octave = 4;
 
-        match (pitch_class) {
-            (Err(e_p)) => {
-                return Err(NoteParseError::InvalidPitchClassStringValue(
-                    "invalid pitch class".to_string(),
-                ));
-            }
-            (Ok(p_c)) => {
-                return Ok(Note::new(p_c, octave));
-            }
-        }
-    }
+    //     match (pitch_class) {
+    //         (Err(e_p)) => {
+    //             return Err(NoteParseError::InvalidPitchClassStringValue(
+    //                 "invalid pitch class".to_string(),
+    //             ));
+    //         }
+    //         (Ok(p_c)) => {
+    //             return Ok(Note::new(p_c, octave));
+    //         }
+    //     }
+    // }
 }

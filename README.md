@@ -14,10 +14,12 @@ Tool for getting chords from notes and vice versa
 
 ### CLI
 
-after `cargo run` the cli will present two dialogue options
+after `cargo run` the cli will present four dialogue options
 
-- Get info on a chord -> produces information on a chord constructed from a chord name entered. information includes notes in the chord.
-- Get a chord from some notes -> finds the name of any chords present across the notes given.
+- Information on a known chord -> produces information on a chord constructed from a chord name entered. information includes notes in the chord. Will arpeggio the chord on speakers
+- Create chord from notes -> finds the name of any chords present across the notes given. If there is only one match found, will arpeggio the chord.
+- Play some chords -> takes space separated list of chord names and tries to play them as a progression (TODO: give progression info like key etc)
+- Quit -> quit
 
 ## Background info
 

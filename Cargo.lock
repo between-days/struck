@@ -1004,6 +1004,7 @@ dependencies = [
  "itertools",
  "regex",
  "rodio",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

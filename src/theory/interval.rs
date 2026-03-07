@@ -2,8 +2,12 @@
 
 use core::fmt;
 use itertools::Itertools;
+use std::cmp::Ordering;
 
-use crate::theory::{note::Note, pitch_class};
+use crate::theory::{
+    note::Note,
+    pitch_class::{self, PitchClass},
+};
 
 pub const OCTAVE: [pitch_class::PitchClass; 12] = [
     pitch_class::PitchClass::C,
@@ -87,6 +91,23 @@ impl fmt::Display for Interval {
     }
 }
 
+impl PartialOrd for Note {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.pitch_octave != other.pitch_octave {
+            if self.pitch_octave > other.pitch_octave {
+                return Some(Ordering::Greater);
+            }
+            return Some(Ordering::Less);
+        }
+
+        if self.pitch_class as usize > other.pitch_class as usize {
+            return Some(Ordering::Greater);
+        }
+
+        return Some(Ordering::Less);
+    }
+}
+
 impl Note {
     // find what interval a note is from root
     // count how many semitones we need to get to the note, looping around
@@ -141,7 +162,10 @@ impl Note {
 
         let np = OCTAVE.get(remainder_12).expect("NOT IN ARRAY");
 
-        return Note::new(*np, self.pitch_octave + number_of_12s as u8);
+        return Note {
+            pitch_class: *np,
+            pitch_octave: self.pitch_octave + number_of_12s as u8,
+        };
     }
 
     // TODO: feels wrong here
@@ -150,7 +174,10 @@ impl Note {
     // each octave is 12 times the last, each consecutive note is 2 root 12 factor difference, a4 is a clean 440hz in standard equal temperament
     pub fn get_frequency(&self) -> f32 {
         // f = 440 * 2^(n/12) where n is number of semitones from A4
-        let a4 = Note::new(super::pitch_class::PitchClass::A, 4);
+        let a4 = Note {
+            pitch_class: PitchClass::A,
+            pitch_octave: 4,
+        };
 
         let semis = a4.find_interval_semis(&self);
 
@@ -161,6 +188,8 @@ impl Note {
 
 #[cfg(test)]
 mod tests {
+    use crate::util::{A4, B5, C4, C9, CS5, D5, E4, F5, G4};
+
     use super::*;
 
     //
@@ -169,7 +198,7 @@ mod tests {
 
     #[test]
     fn test_get_c4() {
-        let c4 = Note::new(crate::theory::pitch_class::PitchClass::C, 4);
+        let c4 = C4;
 
         let ret = c4.get_frequency();
 
@@ -182,8 +211,8 @@ mod tests {
 
     #[test]
     fn test_find_interval_semis_a4_c4() {
-        let root = Note::new(pitch_class::PitchClass::A, 4);
-        let note = Note::new(pitch_class::PitchClass::C, 4);
+        let root = A4;
+        let note = C4;
 
         let ret = root.find_interval_semis(&note);
 
@@ -192,8 +221,8 @@ mod tests {
 
     #[test]
     fn test_find_interval_semis_a4_c9() {
-        let root = Note::new(pitch_class::PitchClass::A, 4);
-        let note = Note::new(pitch_class::PitchClass::C, 9);
+        let root = A4;
+        let note = C9;
 
         let ret = root.find_interval_semis(&note);
 
@@ -206,8 +235,8 @@ mod tests {
 
     #[test]
     fn test_find_interval_9th() {
-        let root = Note::new(pitch_class::PitchClass::A, 4);
-        let note = Note::new(pitch_class::PitchClass::B, 5);
+        let root = A4;
+        let note = B5;
 
         let ret = root.find_interval(&note);
 
@@ -221,33 +250,33 @@ mod tests {
     // a basic case that doesn't need loop around
     #[test]
     fn test_get_interval_normal_hop() {
-        let root = Note::new(pitch_class::PitchClass::A, 4);
+        let root = A4;
         let interval = Interval::MajorThird;
 
         let ret = root.get_interval(interval);
 
-        assert_eq!(ret, Note::new(pitch_class::PitchClass::Cs, 5));
+        assert_eq!(ret, CS5);
     }
 
     // test the circular nature of the intervals
     #[test]
     fn test_get_interval_lap_around() {
-        let root = Note::new(pitch_class::PitchClass::G, 4);
+        let root = G4;
         let interval = Interval::PerfectFifth;
 
         let ret = root.get_interval(interval);
 
-        assert_eq!(ret, Note::new(pitch_class::PitchClass::D, 5));
+        assert_eq!(ret, D5);
     }
 
     #[test]
     fn test_get_interval_lap_around_check_minor7th() {
-        let root = Note::new(pitch_class::PitchClass::G, 4);
+        let root = G4;
         let interval = Interval::MinorSeventh;
 
         let ret = root.get_interval(interval);
 
-        assert_eq!(ret, Note::new(pitch_class::PitchClass::F, 5));
+        assert_eq!(ret, F5);
     }
 
     //
@@ -256,8 +285,8 @@ mod tests {
 
     #[test]
     fn test_find_interval_no_wrap() {
-        let root = Note::new(pitch_class::PitchClass::C, 4);
-        let note = Note::new(pitch_class::PitchClass::E, 4);
+        let root = C4;
+        let note = E4;
 
         let ret = root.find_interval(&note);
 
@@ -266,8 +295,8 @@ mod tests {
 
     #[test]
     fn test_find_interval_lap_around_gminor7th() {
-        let root = Note::new(pitch_class::PitchClass::G, 4);
-        let note = Note::new(pitch_class::PitchClass::F, 5);
+        let root = G4;
+        let note = F5;
 
         let ret = root.find_interval(&note);
 
@@ -276,8 +305,8 @@ mod tests {
 
     #[test]
     fn test_find_interval_lap_around_g9th() {
-        let root = Note::new(pitch_class::PitchClass::G, 4);
-        let note = Note::new(pitch_class::PitchClass::A, 4);
+        let root = G4;
+        let note = A4;
 
         let ret = root.find_interval(&note);
 

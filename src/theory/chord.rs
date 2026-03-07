@@ -434,6 +434,8 @@ pub fn get_notes_from_root_and_intervals(root: &Note, intervals: &Vec<Interval>)
 
 #[cfg(test)]
 mod tests {
+    use crate::util::{A5, AS4, C6, CS5, D5, E5, F5, G4, GS5};
+
     use super::*;
 
     //
@@ -443,15 +445,8 @@ mod tests {
     #[test]
     fn test_find_all_intervals_from_root_and_notes_gm11() {
         // Gm11
-        let root = Note::new(theory::pitch_class::PitchClass::G, 4);
-        let notes = vec![
-            root,
-            Note::new(theory::pitch_class::PitchClass::As, 4),
-            Note::new(theory::pitch_class::PitchClass::D, 5),
-            Note::new(theory::pitch_class::PitchClass::F, 5),
-            Note::new(theory::pitch_class::PitchClass::A, 5),
-            Note::new(theory::pitch_class::PitchClass::C, 6),
-        ];
+        let root = G4;
+        let notes = vec![root, AS4, D5, F5, A5, C6];
 
         let ret = find_all_intervals_from_root_and_notes(&root, notes);
 
@@ -470,14 +465,8 @@ mod tests {
     #[test]
     fn test_find_all_intervals_from_root_and_notes_gm11_missing_5th() {
         // Gdim11
-        let root = Note::new(theory::pitch_class::PitchClass::G, 4);
-        let notes = vec![
-            root,
-            Note::new(theory::pitch_class::PitchClass::As, 4),
-            Note::new(theory::pitch_class::PitchClass::F, 5),
-            Note::new(theory::pitch_class::PitchClass::A, 5),
-            Note::new(theory::pitch_class::PitchClass::C, 6),
-        ];
+        let root = G4;
+        let notes = vec![root, AS4, F5, A5, C6];
 
         let ret = find_all_intervals_from_root_and_notes(&root, notes);
 
@@ -498,7 +487,7 @@ mod tests {
     #[test]
     fn test_get_notes_from_root_and_intervals() {
         // Gdim11
-        let root = Note::new(theory::pitch_class::PitchClass::G, 4);
+        let root = G4;
         let intervals = vec![
             Interval::MinorThird,
             Interval::DiminishedFifth,
@@ -509,17 +498,7 @@ mod tests {
 
         let ret = get_notes_from_root_and_intervals(&root, &intervals);
 
-        assert_eq!(
-            ret,
-            vec![
-                Note::new(theory::pitch_class::PitchClass::G, 4),
-                Note::new(theory::pitch_class::PitchClass::As, 4),
-                Note::new(theory::pitch_class::PitchClass::Cs, 5),
-                Note::new(theory::pitch_class::PitchClass::E, 5),
-                Note::new(theory::pitch_class::PitchClass::Gs, 5),
-                Note::new(theory::pitch_class::PitchClass::C, 6)
-            ]
-        );
+        assert_eq!(ret, vec![G4, AS4, CS5, E5, GS5, C6,]);
     }
 
     //

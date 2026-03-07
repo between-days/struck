@@ -61,9 +61,7 @@ impl FromStr for PitchClass {
             "A" => Ok(PitchClass::A),
             "A#" => Ok(PitchClass::As),
             "B" => Ok(PitchClass::B),
-            _ => Err(PitchClassParseError::InvalidPitchClassStringValue(
-                s.to_string(),
-            )),
+            _ => Err(PitchClassParseError::InvalidStringValue(s.to_string())),
         }
     }
 }

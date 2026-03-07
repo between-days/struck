@@ -12,12 +12,12 @@ pub fn play_progression(chords: Vec<Chord>) {
 }
 
 // play notes one by one building chord
-pub fn roll_chord(chord: Chord) {
+pub fn roll_chord(chord: &Chord) {
     let mut handle =
         rodio::DeviceSinkBuilder::open_default_sink().expect("open default audio stream");
     handle.log_on_drop(false);
 
-    for n in chord.notes {
+    for n in &chord.notes {
         handle.mixer().add(SineWave::new(n.get_frequency()));
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
