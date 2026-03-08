@@ -54,30 +54,58 @@ impl FromStr for Note {
     }
 }
 
-impl Note {
-    // pub fn new(pitch_class: pitch_class::PitchClass, pitch_octave: u8) -> Note {
-    //     // TODO: ban above certain octave
-    //     return Note {
-    //         pitch_class: pitch_class,
-    //         pitch_octave: pitch_octave,
-    //         // frequency: 2332.0,
-    //     };
-    // }
+// TODO: where should this live?
+// TODO: maybe should refactor to take pitch classes and assume notes as this is also used for getting scale notes which come from just pitch_classes atm
+// entering G B D will go to G4 B4 D4 which is typically incorrect, that input usually means G4 B4 D5 which is a G major chord
+// for cli input, we should assume the notes are in ascending order
+// this is also used for playing scales
+pub fn assume_note_ordering(mut notes: Vec<Note>) -> Vec<Note> {
+    let mut index = 1;
 
-    // pub fn parse(str: &str) -> Result<Note, NoteParseError> {
-    //     let pitch_class = PitchClass::parse(str);
-    //     // TODO: for now default to 4th octave
-    //     let octave = 4;
+    // go over each note in the list, creating a new list in assumed order i.e get that D5 mentioned in above comment
+    while index < notes.len() {
+        // if note is lower than one before, increase octave
+        if notes.get(index) < notes.get(index - 1) {
+            let n = notes[index];
 
-    //     match (pitch_class) {
-    //         (Err(e_p)) => {
-    //             return Err(NoteParseError::InvalidPitchClassStringValue(
-    //                 "invalid pitch class".to_string(),
-    //             ));
-    //         }
-    //         (Ok(p_c)) => {
-    //             return Ok(Note::new(p_c, octave));
-    //         }
-    //     }
-    // }
+            let nn = Note {
+                pitch_class: n.pitch_class,
+                pitch_octave: n.pitch_octave + 1,
+            };
+
+            notes[index] = nn;
+        }
+
+        index = index + 1;
+    }
+
+    return notes;
 }
+
+// impl Note {
+//     // pub fn new(pitch_class: pitch_class::PitchClass, pitch_octave: u8) -> Note {
+//     //     // TODO: ban above certain octave
+//     //     return Note {
+//     //         pitch_class: pitch_class,
+//     //         pitch_octave: pitch_octave,
+//     //         // frequency: 2332.0,
+//     //     };
+//     // }
+
+//     // pub fn parse(str: &str) -> Result<Note, NoteParseError> {
+//     //     let pitch_class = PitchClass::parse(str);
+//     //     // TODO: for now default to 4th octave
+//     //     let octave = 4;
+
+//     //     match (pitch_class) {
+//     //         (Err(e_p)) => {
+//     //             return Err(NoteParseError::InvalidPitchClassStringValue(
+//     //                 "invalid pitch class".to_string(),
+//     //             ));
+//     //         }
+//     //         (Ok(p_c)) => {
+//     //             return Ok(Note::new(p_c, octave));
+//     //         }
+//     //     }
+//     // }
+// }

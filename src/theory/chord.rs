@@ -5,7 +5,10 @@ use std::{
     str::FromStr,
 };
 
-use crate::theory::{self, error::ChordParseError, interval::Interval, note::Note};
+use crate::{
+    parser::chord_parser::chord_name_from_root_and_quality,
+    theory::{self, error::ChordParseError, interval::Interval, note::Note},
+};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SuspendedType {
@@ -430,6 +433,26 @@ pub fn get_notes_from_root_and_intervals(root: &Note, intervals: &Vec<Interval>)
         .chain(is.iter().map(|i| root.get_interval(*i)))
         // .cloned()
         .collect()
+}
+
+impl Chord {
+    // TODO: cleanup, maybe look at chord builder usage, look at grouping inroads to a chord
+    pub fn from_root_and_quality(root: Note, chord_quality: ChordQuality) -> Chord {
+        let intervals = Vec::from(chord_quality);
+        let notes = get_notes_from_root_and_intervals(&root, &intervals);
+        let triad_quality = TriadQuality::from(chord_quality);
+        let name = chord_name_from_root_and_quality(root, chord_quality);
+
+        return Chord {
+            name,
+            root,
+            notes,
+            triad_quality,
+            chord_quality,
+            add_degree: None,
+            intervals,
+        };
+    }
 }
 
 #[cfg(test)]

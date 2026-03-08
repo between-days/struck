@@ -19,6 +19,8 @@ use crate::theory::{
 
 // TODO: should be named chordparser
 
+// TODO: making this it's own package might be a mistake, there's lots of fromstr which belongs in chord.rs. maybe make chord_parser in the theory package
+// not sure, anyways look into it
 pub fn parse_chord_quality(s: &str) -> Result<ChordQuality, ChordParseError> {
     match s {
         "m" => Ok(ChordQuality::Minor),
@@ -39,17 +41,9 @@ pub fn parse_chord_quality(s: &str) -> Result<ChordQuality, ChordParseError> {
 }
 // }
 
-// take a note as a root, take some notes, work out what chord it could be
-pub fn identify_from_root_and_notes(root: &Note, notes: &Vec<Note>) -> Chord {
-    let chord_builder = ChordBuilder::new();
-
-    let intervals = find_all_intervals_from_root_and_notes(root, notes.clone());
-
-    // identify chord quality, gives us a foundation for naming
-    let chord_quality = derive_chord_quality_from_intervals(&intervals);
-
-    // TODO: maybe move this to function later
-    let chord_name = match chord_quality {
+// TODO: organize more!
+pub fn chord_name_from_root_and_quality(root: Note, chord_quality: ChordQuality) -> String {
+    return match chord_quality {
         ChordQuality::Ambiguous => "Ambiguous".to_string(),
         ChordQuality::Minor => format!("{}m", root),
         ChordQuality::Major => format!("{}", root),
@@ -71,6 +65,20 @@ pub fn identify_from_root_and_notes(root: &Note, notes: &Vec<Note>) -> Chord {
         ChordQuality::Suspended(SuspendedType::Sus2) => format!("{}sus2", root),
         ChordQuality::Suspended(SuspendedType::Sus4) => format!("{}sus4", root),
     };
+}
+
+// take a note as a root, take some notes, work out what chord it could be
+// TODO: this probably belongs in chord.rs
+pub fn identify_from_root_and_notes(root: &Note, notes: &Vec<Note>) -> Chord {
+    let chord_builder = ChordBuilder::new();
+
+    let intervals = find_all_intervals_from_root_and_notes(root, notes.clone());
+
+    // identify chord quality, gives us a foundation for naming
+    let chord_quality = derive_chord_quality_from_intervals(&intervals);
+
+    // TODO: maybe move this to function later
+    let chord_name = chord_name_from_root_and_quality(*root, chord_quality);
 
     chord_builder
         .root(*root)

@@ -10,7 +10,7 @@ use crate::{
         self,
         chord::{Chord, ChordQuality},
         error::{ChordParseError, NoteParseError},
-        note::Note,
+        note::{self, Note},
         player::{self},
     },
 };
@@ -42,7 +42,7 @@ pub fn handle_menu() {
                     handle_notes_loop();
                 }
                 2 => {
-                    handle_progression_loop();
+                    handle_chords_loop();
                 }
                 3 => {
                     println!("Goodbye!");
@@ -60,7 +60,7 @@ pub fn handle_menu() {
     }
 }
 
-fn handle_progression_loop() {
+fn handle_chords_loop() {
     // find each chord string
     // get each chord from that
     // play all of them
@@ -87,7 +87,7 @@ fn handle_progression_loop() {
             .map(|cs| parser::chord_parser::identify_from_name(cs.trim().to_string()).expect("msg"))
             .collect();
 
-        player::play_progression(chords);
+        player::play_chords(chords);
     }
 }
 
@@ -145,31 +145,6 @@ fn identify_notes_from_chord_name(chord_name: String) -> Result<(), ChordParseEr
     Ok(())
 }
 
-// entering G B D will go to G4 B4 D4 which is typically incorrect, that input usually means G4 B4 D5 which is a G major chord
-// for cli input, we should assume the notes are in ascending order
-fn assume_note_ordering(mut notes: Vec<Note>) -> Vec<Note> {
-    let mut index = 1;
-
-    // go over each note in the list, creating a new list in assumed order i.e get that D5 mentioned in above comment
-    while index < notes.len() {
-        // if note is lower than one before, increase octave
-        if notes.get(index) < notes.get(index - 1) {
-            let n = notes[index];
-
-            let nn = Note {
-                pitch_class: n.pitch_class,
-                pitch_octave: n.pitch_octave + 1,
-            };
-
-            notes[index] = nn;
-        }
-
-        index = index + 1;
-    }
-
-    return notes;
-}
-
 fn identify_chord_from_notes(notes_raw: String) -> Result<(), NoteParseError> {
     // TODO: if there aren't octave numbers on the string notes A4, B5 for example, we should assume the notes are ascending
     // so G B D should default to G4, and so then B4, D5
@@ -180,7 +155,7 @@ fn identify_chord_from_notes(notes_raw: String) -> Result<(), NoteParseError> {
 
     println!("got base notes");
 
-    let notes = assume_note_ordering(n);
+    let notes = note::assume_note_ordering(n);
 
     println!("got ordered notes");
 

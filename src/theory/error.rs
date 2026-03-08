@@ -1,6 +1,12 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+pub enum ScaleDegreeParseError {
+    #[error("invalid scale degree string value: {0}")]
+    InvalidStringValue(String),
+}
+
+#[derive(Debug, Error)]
 pub enum PitchClassParseError {
     #[error("invalid pitch class string value: {0}")]
     InvalidStringValue(String),

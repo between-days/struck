@@ -1002,6 +1002,7 @@ dependencies = [
  "clearscreen",
  "dialoguer",
  "itertools",
+ "rand 0.10.0",
  "regex",
  "rodio",
  "thiserror 2.0.18",

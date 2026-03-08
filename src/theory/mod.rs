@@ -5,3 +5,4 @@ pub mod note;
 pub mod pitch_class;
 pub mod player;
 pub mod progression;
+pub mod scale;

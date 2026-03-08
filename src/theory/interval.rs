@@ -29,7 +29,9 @@ pub const OCTAVE: [pitch_class::PitchClass; 12] = [
 // names refer to chromatic scale positions so we don't need to worry about scales when finding chords intervals
 #[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd)]
 pub enum Interval {
+    Root = 0,
     // we only consider the ones relevant to naming for now
+    MinorSecond = 1,
     MajorSecond = 2,
     MinorThird = 3,
     MajorThird = 4,
@@ -50,6 +52,7 @@ pub enum Interval {
 impl From<i8> for Interval {
     fn from(value: i8) -> Self {
         match value {
+            1 => Interval::MinorSecond,
             2 => Interval::MajorSecond,
             3 => Interval::MinorThird,
             4 => Interval::MajorThird,
@@ -72,6 +75,8 @@ impl From<i8> for Interval {
 impl fmt::Display for Interval {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Interval::Root => write!(f, "Root"),
+            Interval::MinorSecond => write!(f, "Minor 2nd"),
             Interval::MajorSecond => write!(f, "Major 2nd"),
             Interval::MinorThird => write!(f, "Minor 2nd"),
             Interval::MajorThird => write!(f, "Major 3rd"),
@@ -91,6 +96,24 @@ impl fmt::Display for Interval {
     }
 }
 
+// impl PartialOrd for PitchClass {
+//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+
+//         // if self.pitch_octave != other.pitch_octave {
+//         //     if self.pitch_octave > other.pitch_octave {
+//         //         return Some(Ordering::Greater);
+//         //     }
+//         //     return Some(Ordering::Less);
+//         // }
+
+//         // if self.pitch_class as usize > other.pitch_class as usize {
+//         //     return Some(Ordering::Greater);
+//         // }
+
+//         // return Some(Ordering::Less);
+//     }
+// }
+
 impl PartialOrd for Note {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.pitch_octave != other.pitch_octave {
@@ -105,6 +128,34 @@ impl PartialOrd for Note {
         }
 
         return Some(Ordering::Less);
+    }
+}
+
+impl PitchClass {
+    // get this many semitones above the root note
+    pub fn get_interval(&self, interval: Interval) -> PitchClass {
+        // get where the root pitch class is in octave
+        let root_index = match OCTAVE.iter().position(|x| *x == *self) {
+            Some(res) => res,
+            None => 0, // TODO: fix this
+        };
+
+        let a = root_index + interval as usize;
+
+        // taking out the multiples of 12 leaves us with the correct pitch class index in the octave array
+        // counting the 12s gives us the octave shift
+        // this will be the new pitch class index
+        let remainder_12 = a % 12;
+        // let number_of_12s = a / 12;
+
+        let np = OCTAVE.get(remainder_12).expect("NOT IN ARRAY");
+
+        return *np;
+
+        // return Note {
+        //     pitch_class: *np,
+        //     pitch_octave: *self as u8 + number_of_12s as u8,
+        // };
     }
 }
 
@@ -191,6 +242,19 @@ mod tests {
     use crate::util::{A4, B5, C4, C9, CS5, D5, E4, F5, G4};
 
     use super::*;
+
+    //
+    // interval_from_i8
+    //
+
+    #[test]
+    fn test_interval_from_i8_3() {
+        let expected = Interval::MinorThird;
+
+        let ret = Interval::from(3);
+
+        assert_eq!(ret, expected);
+    }
 
     //
     // get_frequency_for_note
